@@ -1,7 +1,7 @@
 # Main config file for training a model
 
 # Run specifications
-runame: training_dev
+runname: training_dev
 
 # Paths
 data_dir: "/Users/wafaa.wardah/tubCloud/nisqa_things/mini_nisqa_corpus" # main input dir with dataset samples and csv files
@@ -16,3 +16,11 @@ csv_db_train: # dataset names of training sets, the dataset names must be in 'db
 csv_db_val:  # dataset names of validation sets, the dataset names must be in 'db' column of csv file
     - NISQA_VAL_SIM
     - NISQA_VAL_LIVE
+
+# Feature Extractor specifications
+sample_rate: 16000  # (for max 20 second long audio)
+max_length: 320000  # should be bigger than the size of the input waveform [1, 432001], designed for max 20 second long audio sampled at 16kHz. Longer waveforms will be sliced to max_length.
+
+# Training specifications
+batch_size: 3
+max_epochs: 2
