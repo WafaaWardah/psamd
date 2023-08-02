@@ -27,31 +27,24 @@ if __name__ == "__main__":
     print(f'\n\n-----------------------------\n\tModel Training\n-----------------------------')
 
     # load data
-
-    bundle = torchaudio.pipelines.WAV2VEC2_XLSR53
-    feature_extractor = bundle.get_model()
-    tr_df, trainset, val_df, valset = lib.load_data(args['data_dir'], args['csv_file'], 
+    tr_df, trainset, val_df, valset = lib.load_data(args['device'], args['data_dir'], args['csv_file'], 
                                     args['csv_db_train'], args['csv_db_train'], 
-                                    args['sample_rate'], args['max_length'], feature_extractor)
-    
-    
+                                    args['sample_rate'], args['max_length'])
 
-    trainloader = DataLoader(trainset, batch_size=args['batch_size'], shuffle=False, collate_fn=lib.pad_collate)
+    x, y, idx = trainset.__getitem__(0)
+
+    print(f'idx: {idx}, x: {len(x)}, y: {len(y)}')
+    
+    trainloader = DataLoader(trainset, batch_size=args['batch_size'], shuffle=False) #, collate_fn=lib.pad_collate
+
+    for b_num, xx, yy in enumerate(trainloader):
+        print(f'batch number {b_num}, len of xx {len(xx)}, len of yy {len(yy)}')
+
+    sys.exit()
     valloader = DataLoader(valset, batch_size=args['batch_size'], shuffle=False, collate_fn=lib.pad_collate)
 
     # load model
     model = lib.ModelDim()
-
-    print('\n\nInvestigating thte model feature extractor:\n')
-
-    state = model.feature_extractor.state_dict()
-
-    #print(f'state is {state}')
-
-    for i, x in enumerate(state):
-        print(i, x)
-
-    sys.exit()
 
 
     criterion = torch.nn.MSELoss(reduction='none')
@@ -62,11 +55,11 @@ if __name__ == "__main__":
     for epoch in range(args['max_epochs']):
 
         # train loop
-        for b, (xx_pad, x_lens, yy, idx) in enumerate(trainloader):
+        for b, (xx_pad, yy, idx) in enumerate(trainloader):
             print(f'\n\nbatch {b} indices {idx} batch_x shape is {xx_pad.shape}, batch_y shape is {len(yy)}\n')
-            outputs = model(xx_pad, x_lens)
+            outputs = model(xx_pad)
 
-            outputs2 = model(xx_pad, x_lens)
+            outputs2 = model(xx_pa)
 
             print(len(outputs))
             print(len(outputs2))

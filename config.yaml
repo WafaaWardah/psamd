@@ -2,6 +2,7 @@
 
 # Run specifications
 runname: training_dev
+device: cpu # or cuda for gpu
 
 # Paths
 data_dir: "/Users/wafaa.wardah/tubCloud/nisqa_things/mini_nisqa_corpus" # main input dir with dataset samples and csv files
