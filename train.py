@@ -28,14 +28,23 @@ if __name__ == "__main__":
 
     # load data
     tr_df, trainset, val_df, valset = lib.load_data(args['device'], args['data_dir'], args['csv_file'], 
-                                    args['csv_db_train'], args['csv_db_train'], 
+                                    args['csv_db_train'], args['csv_db_val'], args['num_layers'], 
                                     args['sample_rate'], args['max_length'])
 
-    x, y, idx = trainset.__getitem__(0)
+    x, y, idx = trainset.__getitem__(4)
+    
 
     print(f'idx: {idx}, x: {len(x)}, y: {len(y)}')
+
+    for i, item in enumerate(x):
+        print(f'{i}, len of item is {len(item)} of shape {item.shape}')
+
+    print(f'x at 0 index is {x[0].shape}')
+    #print(f'{len(x[1])}')
     
     trainloader = DataLoader(trainset, batch_size=args['batch_size'], shuffle=False) #, collate_fn=lib.pad_collate
+
+    sys.exit()
 
     for b_num, xx, yy in enumerate(trainloader):
         print(f'batch number {b_num}, len of xx {len(xx)}, len of yy {len(yy)}')

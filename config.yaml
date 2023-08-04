@@ -19,6 +19,7 @@ csv_db_val:  # dataset names of validation sets, the dataset names must be in 'd
     - NISQA_VAL_LIVE
 
 # Feature Extractor specifications
+num_layers: 7
 sample_rate: 16000  # (for max 20 second long audio)
 max_length: 320000  # should be bigger than the size of the input waveform [1, 432001], designed for max 20 second long audio sampled at 16kHz. Longer waveforms will be sliced to max_length.
 

@@ -40,12 +40,13 @@ class DimDataset(Dataset):
 
 class SQAdataset(Dataset):
 
-    def __init__(self, df, device, dir):
+    def __init__(self, df, device, dir, num_layers):
         super().__init__()
 
         self.df = df
         self.device = get_device(device)
         self.dir = dir
+        self.num_layers = num_layers
         self.bundle = torchaudio.pipelines.WAV2VEC2_XLSR53
         self.model = self.bundle.get_model().to(self.device)
 
@@ -55,17 +56,13 @@ class SQAdataset(Dataset):
         wav_file_path = os.path.join(self.dir, path)
         #mos = [float(x) for x in row['mos']][0]
         features = self.extract_features_xlsr53(wav_file_path)
-        x_tensor = torch.stack(features, dim=0)
-        x_tensor = torch.squeeze(x_tensor)
-        x_tensor = torch.flatten(x_tensor)
-        x = [x_tensor, row.values.flatten().tolist()]
         y_mos = self.df['mos'].iloc[idx].reshape(-1).astype('float32') 
         y_noi = self.df['noi'].iloc[idx].reshape(-1).astype('float32')
         y_dis = self.df['dis'].iloc[idx].reshape(-1).astype('float32')         
         y_col = self.df['col'].iloc[idx].reshape(-1).astype('float32')                
         y_loud = self.df['loud'].iloc[idx].reshape(-1).astype('float32')                
         y = np.concatenate((y_mos, y_noi, y_dis, y_col, y_loud), axis=0)
-        return x, y, idx
+        return features, y, idx
 
     def extract_features_xlsr53(self, path):
         waveform, sample_rate = torchaudio.load(path)
@@ -74,8 +71,13 @@ class SQAdataset(Dataset):
             waveform = torchaudio.functional.resample(waveform, sample_rate, self.bundle.sample_rate)
         with torch.inference_mode():
             features, _ = self.model.extract_features(waveform, num_layers=self.num_layers)
+        features = torch.hstack([torch.squeeze(f) for f in features])
+
+        print(f'\nfeatures shape is {features.shape}')
+    
         return features
     
+
     def __len__(self):
         return len(self.df)
     
@@ -108,10 +110,8 @@ class ModelDim(nn.Module):
 
 def get_device(device):   
         if torch.cuda.is_available() and device == "cuda":
-            print(f'\nDevice is cuda.')
             return torch.device("cuda")
         else:
-            print(f'\nDevice is cpu.')
             return torch.device("cpu")
     
 
@@ -126,8 +126,8 @@ def get_set(data_dir, csv_file, db_dict, sample_rate, max_length):
     return df, DimDataset(df, data_dir, sample_rate, max_length)
 
 
-def load_data(device, dir, csv, tr_db, val_db, sr, max_len):
-    print(f'\nLoading training set...')
+def load_data(device, dir, csv, tr_db, val_db, num_layers, sr, max_len):
+    print(f'\nLoading training & validation sets...')
     dfile = pd.read_csv(os.path.join(dir, csv))
     if not set(tr_db + val_db).issubset(dfile.db.unique().tolist()):
         missing_datasets = set(tr_db + val_db).difference(dfile.db.unique().tolist())
@@ -135,10 +135,10 @@ def load_data(device, dir, csv, tr_db, val_db, sr, max_len):
     tr_df = dfile[dfile.db.isin(tr_db)].reset_index()
     val_df = dfile[dfile.db.isin(val_db)].reset_index()
 
-    print(f'\n\nLoading datasets - created dfs.\n\nTrain df is \n{tr_df}\Val df is \n{val_df}')
+    #print(f'\n\nCreated dfs.\n\nTrain df is \n{tr_df}\Val df is \n{val_df}')
     
-    tr_set = SQAdataset(tr_df, device, dir) # dataset with feature extraction performed in getitem()
-    val_set = SQAdataset(val_df, device, dir)
+    tr_set = SQAdataset(tr_df, device, dir, num_layers) # dataset with feature extraction performed in getitem()
+    val_set = SQAdataset(val_df, device, dir, num_layers)
 
     return  tr_df, tr_set, val_df, val_set
 
