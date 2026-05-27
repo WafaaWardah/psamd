@@ -1,7 +1,7 @@
 # P.SAMD: Single-ended perceptual approaches for multi-dimensional analysis
 This repository contains the implementation of the candidate model for this P.SAMD work item relevant to the Study Group 12 / Question 9, of the International Telecommunication Union (ITU-T).
 
-## To set up
+## To Set Up
 
 Install the dependencies (requirements.txt) and download the PXXX.py and the wrapper.py scripts. These are the only scripts needed for inference. The wrapper does not form an integral part of the recommendation, but is provided as an optional aid for users when preparing input speech files from unstructured or live scenarios.
 
