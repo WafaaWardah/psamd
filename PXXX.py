@@ -242,7 +242,7 @@ def main():
     models_by_dim = {}
     for dim in dims:  # dims comes from argparse
         model = ASTXL()
-        state = torch.load(f"/Users/wafaa/TubCloud/psamd/share-model-Dec/weights/{dim}.pth", map_location=torch.device(device), weights_only=True)
+        state = torch.load(os.path.join(weights_path, f"{dim}.pth"), map_location=torch.device(device), weights_only=True)
         model.load_state_dict(state)
         model.to(device)
         model.eval()
