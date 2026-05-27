@@ -78,7 +78,7 @@ Note that these results are obtained with the P.SAMD weights. The results should
 
 The full official conormance test is provided in the Annex A of the Recommendation text.
 
-# SQ-AST Model
+## SQ-AST Model
 The candidate model is a transformer-based speech quality prediction model. An initial version of the model was first published in [this paper](https://www.isca-archive.org/interspeech_2025/wardah25_interspeech.html) and can be cited as follows:
 
 Wardah, W., Spang, R.P., Barriac, V., Reimes, J., Llagostera, A., Berger, J., Möller, S. (2025) SQ-AST: A Transformer-Based Model for Speech Quality Prediction. Proc. Interspeech 2025, 2335-2339, doi: 10.21437/Interspeech.2025-2683
