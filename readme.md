@@ -3,46 +3,44 @@ This repository contains the implementation of the candidate model for this P.SA
 
 ## To set up
 
-Install the dependencies (requirements.txt) and download the PXXX.py and the wrapper.py scripts. These are the only script needed for inference. The wrapper does not form an integral part of the recommendation, but is provided as an aid for users when preparing input speech files from unstructured or live scenarios.
+Install the dependencies (requirements.txt) and download the PXXX.py and the wrapper.py scripts. These are the only scripts needed for inference. The wrapper does not form an integral part of the recommendation, but is provided as an optional aid for users when preparing input speech files from unstructured or live scenarios.
 
 ### Download Weights
-There are 5 weight  ```.pth``` files for each dimension. Download and save them in the same directory as the PXXX.py script.
+There are 5 weight  ```.pth``` files for each dimension. Download and save them in the same directory as the PXXX.py script. The weights can be downloaded [here](https://tubcloud.tu-berlin.de/s/K9owXP3Fnj4pnJg). 
 
-The weights can be downloaded [here](https://tubcloud.tu-berlin.de/s/K9owXP3Fnj4pnJg). 
+## Model Usage
 
-## Running Predictions
+You can run prediction for either one .wav file or for all .wav files in a directory (or .pcm). You can also select if you want to only predict some dimensions to save compute time. 
 
-You can run prediction for either one .wav file or for all .wav files in a directory. You can also select if you want to only predict some dimensions to save compute time. 
+### Command for assessing the quality of one .wav file
 
-### Command for inference of one .wav file
-
-Predict all dimensions for a single .wav file and show the results on screen only (no output file will be created):
+Assess the overall quality as well as all quality dimensions for a single .wav file and show the results on screen only (no output file will be created):
 
 ```bash
 python run_predict.py --path /path/to/file.wav --print True
 ```
 
-Predict selected dimensions (e.g., overall quality mos and noisiness) for a single .wav file and show the results on screen only (no output file will be created):
+Assess selected dimensions (e.g., overall quality mos and noisiness) for a single .wav file and show the results on screen only (no output file will be created):
 
 ```bash
 python run_predict.py --path /path/to/file.wav --dims mos noi --print True
 ```
 
-Predict all dimensions for a single .wav file without printing the results, and save the predictions to an output file:
+Assess all dimensions for a single .wav file without printing the results, and save the predictions to an output file:
 
 ```bash
 python run_predict.py --path /path/to/file.wav --output_dir /outputs/directory
 ```
 
-### Command for inference of all wav files in a directory
+### Command for assessing the quality of all .wav files in a directory
 
-Predict all dimensions for all .wav files in a directory and display the predictions on screen only (no output files will be created):
+Assess all dimensions for all .wav files in a directory and display the predictions on screen only (no output files will be created):
 
 ```bash
 python run_predict.py --path /path/to/directory --print True
 ```
 
-Predict all dimensions for all .wav files in a directory using a specified batch size and number of workers, enable GPU processing, and save the predictions to an output file without printing them on screen:
+Assess all dimensions for all .wav files in a directory using a specified batch size and number of workers, enable GPU processing, and save the predictions to an output file without printing them on screen:
 
 ```bash
 python run_predict.py \
