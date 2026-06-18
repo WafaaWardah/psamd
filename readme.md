@@ -10,9 +10,9 @@ Cite as: Wardah, W., Spang, R.P., Barriac, V., Reimes, J., Llagostera, A., Berge
 Install the dependencies (requirements.txt) and download the P566.py script. This is the only script needed for inference. 
 
 ### Download Weights
-The weight .pth files can be downloaded from [here](https://tubcloud.tu-berlin.de/s/rik9dQaR66R8w5A). There are 5 of them for each dimension. Download and save them in the same directory as the P566.py script.
+The weight .pth files can be downloaded [here](https://tubcloud.tu-berlin.de/s/K9owXP3Fnj4pnJg). There are 5 of them for each dimension. Download and save them in the same directory as the P566.py script.
 
-After the SQ-AST model was published in Interspeech 2025, the model was further trained on new datasets. This produced the improved weights that have been evaluated by it ITU-T SG12 Q9 and approved for standardization. These improved weights can be downloaded [here](https://tubcloud.tu-berlin.de/s/K9owXP3Fnj4pnJg). Note: the coloration weight file is the same, as there was no further improvement.
+Previously published weights from the 2025 Interspeech publication can be downloaded from [here](https://tubcloud.tu-berlin.de/s/rik9dQaR66R8w5A). Note: the coloration weight file is the same, as there was no further improvement beyond this training.
 
 ## Running Predictions
 
@@ -58,7 +58,7 @@ python P566.py \
 ```
 
 ### Conformance Check
-The databases are the same as those used for ITU-T P.863.2 conformance testing and can be accessed [here]: (https://www.itu.int/myworkspace/t-signals/vectors?val=100015010).
+The databases are the same as those used for ITU-T P.863.2 conformance testing and can be accessed [here](https://www.itu.int/myworkspace/t-signals/vectors?val=100015010).
 
 Additionally, a quick check can be done using the two sample speech files in the samples directory. This command can be used to predict their quality scores:
 
@@ -66,7 +66,7 @@ Additionally, a quick check can be done using the two sample speech files in the
 python P566.py --path samples --print True
 ```
 
-Note that these results are from the improved weights (the second link). The results should be:
+Note that these results are from the improved weights (the first link). The results should be:
 
 ```bash
 (1/2) c00007_P501_C_english_m2_FB_48k.wav | MOS: 4.32, NOI: 4.58, DIS: 4.37, COL: 4.62, LOUD: 4.71
