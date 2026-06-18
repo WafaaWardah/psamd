@@ -80,6 +80,7 @@ Use the --prep argument to preprocess the input signal(s) before running P.SAMD.
 ```bash
 python P566.py \
     --path /path/to/directory \ 
+    --output_dir /outputs/directory \
     --print True \
     --prep True 
 ```
