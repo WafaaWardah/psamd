@@ -1,5 +1,5 @@
 # ITU-T Rec. P.566 Implementation
-This is a personally maintained repository for the ITU-T Recommendation P.566 Single-ended machine-learning-based approaches for multi-dimensional analysis model. Previously, terms including P.SAMD or SQ-AST have also been used and may still be present in some documents. This repository may contain notes and updates that cannot be added to the official ITU-T attachments directly without due official processes in a short time.
+This is a personally maintained repository for the ITU-T Recommendation P.566 Single-ended machine-learning-based models for multi-dimensional speech quality analysis. Previously, terms including P.SAMD or SQ-AST have also been used and may still be present in some documents. This repository may contain notes and updates that cannot be added to the official ITU-T attachments directly without due official processes in a short time.
 
 The implementation is a transformer-based speech quality prediction model. It was first released as SQ-AST in 2025, and [this paper](https://www.isca-archive.org/interspeech_2025/wardah25_interspeech.html) can be cited when using this model, along with the Recommendation reference.
 
