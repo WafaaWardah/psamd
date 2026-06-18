@@ -1,4 +1,5 @@
 # Wafaa Wardah, TU-Berlin, 2026
+# Version 1
 
 import multiprocessing as mp, threading, sys, gc, logging, os
 import pandas as pd
@@ -17,7 +18,7 @@ from transformers import ASTModel, ASTFeatureExtractor, logging as hf_logging
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 class ASTXL(torch.nn.Module):
-    """Model-XL with individual AST for each dimension."""
+    """Individual AST for each dimension."""
 
     PRETRAINED_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
 
@@ -43,9 +44,9 @@ class ASTVal(Dataset):
         self.df = df
         self.data_dir = data_dir
         self.feature_extractor = ASTFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
-        self.feature_extractor.sampling_rate = 48000  # Set to 48 kHz for our 48k audio
-        self.feature_extractor.max_length = 1024      # Truncate inputs after 1024 patches
-        self.feature_extractor.num_mel_bins = 128     # Customize if needed; keep original as default
+        self.feature_extractor.sampling_rate = 48000  
+        self.feature_extractor.max_length = 1024      
+        self.feature_extractor.num_mel_bins = 128     
         self.feature_extractor.return_attention_mask = True
         self.feature_extractor.mean = db_mean
         self.feature_extractor.std = db_std
@@ -55,49 +56,24 @@ class ASTVal(Dataset):
     def __len__(self):
         return len(self.df)
 
-
-    ########## Loading PCM files for conformance test ###############
-    def load_pcm_48k(file_name):
-        # Read raw PCM data
-        audio = np.fromfile(file_name, dtype="<i2")  # little-endian int16
-
-        # Convert to float32 in range [-1, 1]
-        audio = audio.astype(np.float32) / 32768.0
-
-        # Add channel dimension -> [1, T]
-        waveform = torch.tensor(audio).unsqueeze(0)
-
-        sample_rate = 48000
-
-        return waveform, sample_rate
-    #################################################################
-
     
     def __getitem__(self, index):
         TARGET_SR = 48000
         file_name = os.path.join(self.data_dir, self.df["file_path"].iloc[index])
-
         ext = os.path.splitext(file_name)[-1].lower()
 
         if ext == ".wav":
-
             waveform, sample_rate = torchaudio.load(file_name)
 
         elif ext == ".pcm":
-
             audio = np.fromfile(file_name, dtype="<i2")
-
             audio = audio.astype(np.float32) / 32768.0
-
             waveform = torch.tensor(audio).unsqueeze(0)
-
             sample_rate = 48000
 
         else:
-
             raise ValueError(f"Unsupported format: {ext}")
 
-        # mono: [C, T] -> [T]
         waveform = waveform.mean(dim=0) if waveform.shape[0] > 1 else waveform.squeeze(0)
 
         if sample_rate != TARGET_SR:
@@ -108,15 +84,6 @@ class ASTVal(Dataset):
             waveform = resampler(waveform)
             sample_rate = TARGET_SR
 
-        # Apply wrapper only here
-        if self.wrap in [True, 'true', 'True', '1', 1]:
-            #print("\nApplying wrapper preprocessing to input signal...")
-            waveform, sample_rate = wrapper.preprocess(
-                waveform,
-                sample_rate=sample_rate,
-                target_sr=TARGET_SR,
-            )
-
         features = self.feature_extractor(
             waveform,
             sampling_rate=sample_rate,
@@ -125,7 +92,6 @@ class ASTVal(Dataset):
         )["input_values"]
 
         features = features.squeeze(0)
-
         return index, features
 
 
@@ -134,8 +100,8 @@ def main():
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     parser = argparse.ArgumentParser(description="Run the prediction script.")
-    parser.add_argument("--path", type=str, help="Path to the wav file or to the data directory")
-    parser.add_argument("--output_dir", type=str, help="Path to the output directory if saving the results", default=None)
+    parser.add_argument("--path", type=str, required=True, help="Path to the wav file or to the data directory")
+    parser.add_argument("--output_dir", type=str, required=True, help="Path to the output directory")
     
     parser.add_argument(
         "--dims",
@@ -152,9 +118,7 @@ def main():
     parser.add_argument("--device", type=str, help="Device: cpu or gpu, defaults is set to cpu", default="cpu")
     parser.add_argument("--bs", type=str, help="Batch size, default is set to 1", default=1)
     parser.add_argument("--nw", type=str, help="Number of workers, default is set to 0", default=0)
-
     parser.add_argument("--print", type=str, help="Option to print the predicted scores out, default is set to False", default=False)
-
     parser.add_argument("--prep", type=str, help="Option to preprocess the input signals using the recommended wrapper, default is set to False", default=False)
 
     args = parser.parse_args()
@@ -163,16 +127,114 @@ def main():
     dims = args.dims
     bs = int(args.bs)
     num_workers = int(args.nw)
-    wrap = args.prep 
+    wrap = args.prep # if true, applies the wrapper and post-mapping. If false, uses the raw input as-is and no post-mapping.
 
-    if str(args.path).endswith('.wav'): 
-        wav_path = args.path
-        data_dir = None
-    else: 
-        data_dir = args.path
-        wav_path = None
 
-    weights_path = "./" # Change this before packaging - perhaps put in same dir?
+    ######################### Apply preprocessing wrapper ##########################
+    if wrap in [True, 'true', 'True', '1', 1]:
+        print("\nApplying wrapper preprocessing to input signal...")
+
+        TARGET_SR = 48000
+
+        if str(args.path).endswith('.wav') or str(args.path).endswith('.pcm'):
+            file_name = args.path
+            ext = os.path.splitext(file_name)[-1].lower()
+
+            # Create new data_dir to save the preprocessed segment files
+            new_dir = os.path.join(
+                output_dir,
+                os.path.basename(str(args.path).removesuffix(ext)) + "_prep_" + current_time
+            )
+            os.makedirs(new_dir, exist_ok=True)
+
+            if ext == ".wav":
+                waveform, sample_rate = torchaudio.load(file_name)
+
+            elif ext == ".pcm":
+                audio = np.fromfile(file_name, dtype="<i2")
+                audio = audio.astype(np.float32) / 32768.0
+                waveform = torch.tensor(audio).unsqueeze(0)
+                sample_rate = TARGET_SR
+
+            else:
+
+                raise ValueError(f"Unsupported format: {ext}")
+
+            waveform = waveform.mean(dim=0) if waveform.shape[0] > 1 else waveform.squeeze(0)
+
+            if sample_rate != TARGET_SR:
+                resampler = torchaudio.transforms.Resample(
+                    orig_freq=sample_rate,
+                    new_freq=TARGET_SR
+                )
+                waveform = resampler(waveform)
+                sample_rate = TARGET_SR
+
+            wrapper.preprocess(
+                waveform,
+                data_dir=str(args.path).removesuffix('.wav').removesuffix('.pcm'),
+                new_dir=new_dir,
+                sample_rate=sample_rate,
+                target_sr=TARGET_SR,
+            )
+
+        else:
+
+            # Create new data_dir to save the preprocessed segment files
+            new_dir = os.path.join(
+                output_dir,
+                os.path.basename(args.path) + "_prep_" + current_time
+            )
+            os.makedirs(new_dir, exist_ok=True)
+
+            for file in os.listdir(args.path):
+                if file.endswith('.wav') or file.endswith('.pcm'):
+                    file_name = os.path.join(args.path, file)
+                    ext = os.path.splitext(file_name)[-1].lower()
+
+                    if ext == ".wav":
+                        waveform, sample_rate = torchaudio.load(file_name)
+
+                    elif ext == ".pcm":
+                        audio = np.fromfile(file_name, dtype="<i2")
+                        audio = audio.astype(np.float32) / 32768.0
+                        waveform = torch.tensor(audio).unsqueeze(0)
+                        sample_rate = TARGET_SR
+
+                    else:
+                        raise ValueError(f"Unsupported format: {ext}")
+
+                    waveform = waveform.mean(dim=0) if waveform.shape[0] > 1 else waveform.squeeze(0)
+
+                    if sample_rate != TARGET_SR:
+                        resampler = torchaudio.transforms.Resample(
+                            orig_freq=sample_rate,
+                            new_freq=TARGET_SR
+                        )
+                        waveform = resampler(waveform)
+                        sample_rate = TARGET_SR
+
+                    wrapper.preprocess(
+                        waveform,
+                        data_dir=file_name.removesuffix('.wav').removesuffix('.pcm'),
+                        new_dir=new_dir,
+                        sample_rate=sample_rate,
+                        target_sr=TARGET_SR,
+                    )
+
+        data_dir = new_dir
+        print(f"Preprocessed files saved to: {new_dir}\n")
+        ######################### Applied preprocessing wrapper ##########################
+
+    else:
+        if str(args.path).endswith('.wav'): 
+            wav_path = args.path
+            data_dir = None
+        else: 
+            data_dir = args.path
+            wav_path = None
+
+    weights_path = "./" # Change this as needed
     db_mean = -10.25446422 # calculated from the validation datasets from July 2025
     db_std = 4.205750774 # calculated from the validation datasets from July 2025
     
@@ -242,7 +304,7 @@ def main():
     models_by_dim = {}
     for dim in dims:  # dims comes from argparse
         model = ASTXL()
-        state = torch.load(os.path.join(weights_path, f"{dim}.pth"), map_location=torch.device(device), weights_only=True)
+        state = torch.load((os.path.join(weights_path, f"{dim}.pth")), map_location=torch.device(device), weights_only=True)
         model.load_state_dict(state)
         model.to(device)
         model.eval()
@@ -270,12 +332,33 @@ def main():
                 if args.print in [True, 'true', 'True', '1', 1]:  # Print option
                     file_path = ds.df.loc[int(idx), "file_path"]
                     scores = y_hat_val[idx] * 4 + 1  # descaled
+
+                    ###### Apply post-mapping to predictions if wrapper was applied ######
+                    if wrap in [True, "true", "True", "1", 1]:
+                        #print("\nApplying post-mapping to predicted scores...")
+
+                        for dim in dims:
+                            col_idx = COL_IDX[dim]
+                            scores[col_idx] = wrapper.post_mapping(
+                                scores[col_idx]
+                            )
+
                     parts = [f"{d.upper()}: {scores[COL_IDX[d]]:.2f}" for d in dims]
                     print(f"({processed_files}/{total_files}) {os.path.basename(file_path)} | " + ", ".join(parts))
 
     # Scale predictions once all batches are processed
     y_hat_val_descaled = y_hat_val * 4 + 1 # On CPU
     y_hat_val_descaled = y_hat_val_descaled.detach().numpy() # On CPU
+
+    ###### Apply post-mapping to predictions if wrapper was applied ######
+    if wrap in [True, "true", "True", "1", 1]:
+        #print("\nApplying post-mapping to predicted scores...")
+
+        for dim in dims:
+            col_idx = COL_IDX[dim]
+            y_hat_val_descaled[:, col_idx] = wrapper.post_mapping(
+                y_hat_val_descaled[:, col_idx]
+            )
 
     # Convert predictions into DataFrame columns on CPU
     ds.df['mos_pred'] = y_hat_val_descaled[:, 0]
@@ -285,8 +368,8 @@ def main():
     ds.df['loud_pred'] = y_hat_val_descaled[:, 4]
 
     if output_dir is not None:
-        ds.df.drop(columns=['db_mean', 'db_std'], inplace=True)  # Drop unnecessary columns before saving
-        outfile = db_name + '_prediction_per_file_' + current_time + '.csv'
+        ds.df.drop(columns=['db_mean', 'db_std'], inplace=True)  
+        outfile = db_name + '_psamd_' + current_time + '.csv'
         ds.df.to_csv(os.path.join(output_dir, outfile), index=False)  
         print("Saved predicted scores:", os.path.join(output_dir, outfile))
 
